@@ -9,6 +9,7 @@ let lastSearchResults = null;
 
 // Search by song or artist
 async function searchSongs(term) {
+  showSpinner();
   const res = await fetch(`${apiURL}/suggest/${term}`);
   const data = await res.json();
 
@@ -29,6 +30,9 @@ form.addEventListener('submit', (e) => {
   }
 });
 
+let currentPage = 0;
+const pageSize = 5;
+
 function showDataSafe(lyrics) {
   result.innerHTML = '';
   more.innerHTML = '';
@@ -36,7 +40,10 @@ function showDataSafe(lyrics) {
   const ul = document.createElement('ul');
   ul.className = 'songs';
 
-  lyrics.data.forEach((song) => {
+  const start = currentPage * pageSize;
+  const paginated = lyrics.data.slice(start, start + pageSize);
+
+  paginated.forEach((song) => {
     const li = document.createElement('li');
 
     const span = document.createElement('span');
@@ -53,7 +60,6 @@ function showDataSafe(lyrics) {
     button.dataset.artist = song.artist.name;
     button.dataset.songtitle = song.title;
 
-    // Add the click event
     button.addEventListener('click', () => {
       const artist = button.dataset.artist;
       const songTitle = button.dataset.songtitle;
@@ -66,26 +72,31 @@ function showDataSafe(lyrics) {
 
   result.appendChild(ul);
 
-  if (lyrics.prev || lyrics.next) {
-    if (lyrics.prev) {
-      const prevButton = document.createElement('button');
-      prevButton.className = 'btn';
-      prevButton.textContent = 'Prev';
-      prevButton.addEventListener('click', () => getMoreSongs(lyrics.prev));
-      more.appendChild(prevButton);
-    }
+  if (currentPage > 0) {
+    const prevButton = document.createElement('button');
+    prevButton.className = 'btn';
+    prevButton.textContent = 'Prev';
+    prevButton.addEventListener('click', () => {
+      currentPage--;
+      showDataSafe(lyrics);
+    });
+    more.appendChild(prevButton);
+  }
 
-    if (lyrics.next) {
-      const nextButton = document.createElement('button');
-      nextButton.className = 'btn';
-      nextButton.textContent = 'Next';
-      nextButton.addEventListener('click', () => getMoreSongs(lyrics.next));
-      more.appendChild(nextButton);
-    }
+  if (start + pageSize < lyrics.data.length) {
+    const nextButton = document.createElement('button');
+    nextButton.className = 'btn';
+    nextButton.textContent = 'Next';
+    nextButton.addEventListener('click', () => {
+      currentPage++;
+      showDataSafe(lyrics);
+    });
+    more.appendChild(nextButton);
   }
 }
 
 async function getLyricsSafe(artist, songTitle) {
+  showSpinner(); // add this
   const res = await fetch(`${apiURL}/v1/${artist}/${songTitle}`);
   const data = await res.json();
 
@@ -132,9 +143,15 @@ async function getLyricsSafe(artist, songTitle) {
 
 // Get more songs (pagination)
 async function getMoreSongs(url) {
+  showSpinner();
   const res = await fetch(url);
   const data = await res.json();
 
   lastSearchResults = data;
   showDataSafe(data);
+}
+
+function showSpinner() {
+  result.innerHTML = '<div class="spinner"></div>';
+  more.innerHTML = '';
 }
